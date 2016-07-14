@@ -18,15 +18,18 @@ var (
 	ErrInvalidPattern = errors.New("Invalid logger name pattern")
 )
 
+// Manager is a manager of multiple loggers.
 type Manager struct {
 	mu      sync.Mutex
 	loggers map[string]*logrus.Logger
 }
 
+// NewManager creates a new log manager.
 func NewManager() *Manager {
 	return &Manager{loggers: map[string]*logrus.Logger{}}
 }
 
+// GetLogger returns the logger with the given name, creating one if necessary.
 func (mgr *Manager) GetLogger(name string) (logger *logrus.Logger) {
 	var ok bool
 	mgr.mu.Lock()
@@ -38,6 +41,7 @@ func (mgr *Manager) GetLogger(name string) (logger *logrus.Logger) {
 	return logger
 }
 
+// FindLoggers finds loggers with name matching the provided glob pattern.
 func (mgr *Manager) FindLoggers(pattern string) (loggers []*logrus.Logger, err error) {
 	var compiled glob.Glob
 	compiled, err = glob.Compile(pattern, separator)
@@ -52,7 +56,7 @@ func (mgr *Manager) FindLoggers(pattern string) (loggers []*logrus.Logger, err e
 	return
 }
 
-// GetRootLogger returns the root logger
+// GetRootLogger returns the root logger.
 func (mgr *Manager) GetRootLogger() *logrus.Logger {
 	return mgr.GetLogger("")
 }
@@ -67,7 +71,7 @@ func GetRootLogger() *logrus.Logger {
 	return rootLogger
 }
 
-// FindLoggers finds all loggers matching a pattern. You can use *, ** and ?.
+// FindLoggers finds loggers with name matching a glob pattern.
 func FindLoggers(pattern string) ([]*logrus.Logger, error) {
 	return mgr.FindLoggers(pattern)
 }
