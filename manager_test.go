@@ -23,8 +23,9 @@ type loggerListContainsChecker struct {
 }
 
 func (checker *loggerListContainsChecker) Check(params []interface{}, names []string) (result bool, error string) {
-	// This is idiotic. There are obviously faster ways to do this, but we will
-	// have on the order of 10 loggers, so whatever, brute force it is
+	// There are obviously faster ways to do this, but it's extremely unlikely
+	// we will have hundreds of thousands of loggers in a test, so whatever,
+	// brute force it is
 	list := params[0].([]*logrus.Logger)
 	therest := params[1].([]*logrus.Logger)
 	if len(list) != len(therest) {
