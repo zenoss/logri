@@ -1,3 +1,4 @@
-# logri
+# Logri
 
-Logri is a manager of Logrus loggers.
+Logri lets you dynamically manage multiple Logrus loggers using simple
+configuration.
