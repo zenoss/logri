@@ -8,10 +8,14 @@ import (
 )
 
 func (s *LogriSuite) TestAThing(c *C) {
-	logger := Logger{}
-	hook := test.NewLocal(logger)
-	logger.SetLevel(logrus.InfoLevel)
-	c.Assert(logger.Level, Equals, logrus.InfoLevel)
+	logger := NewRootLogger()
+	hook := test.NewLocal(logger.GetLogrusLogger())
+	logger.SetLevel(logrus.InfoLevel, true)
+	logger.Debug("debug message 1")
+	logger.SetLevel(logrus.DebugLevel, true)
+	logger.Debug("debug message 2")
+	c.Assert(hook.Entries, HasLen, 1)
+	c.Assert(hook.LastEntry().Message, Equals, "debug message 2")
 }
 
 func (s *LogriSuite) TestUnsetLoggerLevel(c *C) {
@@ -21,7 +25,4 @@ func (s *LogriSuite) TestInheritLevelFromParent(c *C) {
 }
 
 func (s *LogriSuite) TestSetRootLoggerToNil(c *C) {
-	logger := Logger{}
-	logger.SetLevel(logrus.InfoLevel)
-	c.Assert(logger.GetLevel(), Equals, logrus.InfoLevel)
 }
