@@ -21,19 +21,25 @@ var (
 
 type Logger struct {
 	mu       *sync.Mutex
-	name     string
+	Name     string
 	parent   *Logger
 	absLevel logrus.Level
+	inherit  bool
 	children map[string]*Logger
 	logger   *logrus.Logger
 }
 
 func NewRootLogger() *Logger {
+	return NewRootLoggerFromLogrus(logrus.New())
+}
+
+func NewRootLoggerFromLogrus(base *logrus.Logger) *Logger {
 	return &Logger{
-		name:     RootLoggerName,
+		Name:     RootLoggerName,
 		absLevel: logrus.InfoLevel,
+		inherit:  true,
 		children: make(map[string]*Logger),
-		logger:   logrus.New(),
+		logger:   base,
 	}
 }
 
@@ -42,16 +48,17 @@ func (l *Logger) GetLogrusLogger() *logrus.Logger {
 }
 
 func (l *Logger) GetChild(name string) *Logger {
-	relative := strings.TrimPrefix(name, l.name+".")
-	abs := fmt.Sprintf("%s.%s", l.name, relative)
+	relative := strings.TrimPrefix(name, l.Name+".")
+	abs := strings.TrimPrefix(fmt.Sprintf("%s.%s", l.Name, relative), ".")
 	parent := l
 	for _, part := range strings.Split(relative, ".") {
 		logger, ok := parent.children[part]
 		if !ok {
 			logger = &Logger{
-				name:     abs,
+				Name:     abs,
 				parent:   parent,
 				absLevel: NilLevel,
+				inherit:  true,
 				children: make(map[string]*Logger),
 				logger: &logrus.Logger{
 					Out:       parent.logger.Out,
@@ -67,27 +74,32 @@ func (l *Logger) GetChild(name string) *Logger {
 	return parent
 }
 
-func (l *Logger) SetLevel(level logrus.Level, propagate bool) error {
+func (l *Logger) SetLevel(level logrus.Level, inherit bool) error {
 	if level == l.absLevel {
 		return nil
 	}
-	if level == NilLevel && l.name == RootLoggerName {
+	if level == NilLevel && l.Name == RootLoggerName {
 		return ErrInvalidRootLevel
 	}
 	l.absLevel = level
 	switch level {
 	case NilLevel:
 		l.logger.Level = l.parent.GetEffectiveLevel()
+		l.inherit = true
 	default:
 		l.logger.Level = level
+		l.inherit = inherit
 	}
-	if propagate {
+	if inherit {
 		l.propagate()
 	}
 	return nil
 }
 
 func (l *Logger) GetEffectiveLevel() logrus.Level {
+	if !l.inherit {
+		return l.parent.GetEffectiveLevel()
+	}
 	return l.logger.Level
 }
 
@@ -97,7 +109,7 @@ func (l *Logger) GetLevel() logrus.Level {
 
 func (l *Logger) propagate() {
 	for _, child := range l.children {
-		go child.inheritLevel(l.logger.Level)
+		child.inheritLevel(l.GetEffectiveLevel())
 	}
 }
 
