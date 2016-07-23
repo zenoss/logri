@@ -81,24 +81,19 @@ func (s *LogriSuite) TestFindLoggers(c *C) {
 	adb := s.mgr.GetLogger("a.b")
 	adbdc := s.mgr.GetLogger("a.b.c")
 
-	loggers, err := s.mgr.FindLoggers("a**")
+	loggers, err := s.mgr.FindLoggers("a")
 	c.Assert(err, IsNil)
-	c.Assert(loggers, LoggerListContains, []*logrus.Logger{a, adbdc, adb})
-
-	loggers, err = s.mgr.FindLoggers("a.**")
-	c.Assert(err, IsNil)
-	c.Assert(loggers, LoggerListContains, []*logrus.Logger{adbdc, adb})
-
-	loggers, err = s.mgr.FindLoggers("**")
-	c.Assert(err, IsNil)
-	c.Assert(loggers, LoggerListContains, []*logrus.Logger{a, b, adbdc, adb, root})
+	c.Assert(loggers, LoggerListContains, []*logrus.Logger{a})
 
 	loggers, err = s.mgr.FindLoggers("a.*")
 	c.Assert(err, IsNil)
-	c.Assert(loggers, LoggerListContains, []*logrus.Logger{adb})
+	c.Assert(loggers, LoggerListContains, []*logrus.Logger{adbdc, adb})
 
-	loggers, err = s.mgr.FindLoggers("**b**")
+	loggers, err = s.mgr.FindLoggers("*")
 	c.Assert(err, IsNil)
-	c.Assert(loggers, LoggerListContains, []*logrus.Logger{b, adb, adbdc})
+	c.Assert(loggers, LoggerListContains, []*logrus.Logger{a, b, adbdc, adb, root})
 
+	loggers, err = s.mgr.FindLoggers("")
+	c.Assert(err, IsNil)
+	c.Assert(loggers, LoggerListContains, []*logrus.Logger{root})
 }
