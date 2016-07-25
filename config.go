@@ -22,6 +22,11 @@ type LoggerConfig struct {
 	Logger string
 	Level  string
 	Local  bool
+	Out    []Out
+}
+
+type OutConfig struct {
+	Type string
 }
 
 func ConfigFromYAML(r io.Reader) (cfg LogriConfig, err error) {
