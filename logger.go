@@ -11,7 +11,8 @@ import (
 
 const (
 	RootLoggerName              = ""
-	NilLevel       logrus.Level = 255
+	MarkerLevel    logrus.Level = 255
+	NilLevel       logrus.Level = 254
 )
 
 var (
@@ -24,6 +25,7 @@ type Logger struct {
 	Name     string
 	parent   *Logger
 	absLevel logrus.Level
+	tmpLevel logrus.Level
 	inherit  bool
 	children map[string]*Logger
 	logger   *logrus.Logger
@@ -37,6 +39,7 @@ func NewRootLoggerFromLogrus(base *logrus.Logger) *Logger {
 	return &Logger{
 		Name:     RootLoggerName,
 		absLevel: logrus.InfoLevel,
+		tmpLevel: MarkerLevel,
 		inherit:  true,
 		children: make(map[string]*Logger),
 		logger:   base,
@@ -69,6 +72,7 @@ func (l *Logger) GetChild(name string) *Logger {
 				Name:     abs,
 				parent:   parent,
 				absLevel: NilLevel,
+				tmpLevel: MarkerLevel,
 				inherit:  true,
 				children: make(map[string]*Logger),
 				logger: &logrus.Logger{
@@ -86,20 +90,36 @@ func (l *Logger) GetChild(name string) *Logger {
 }
 
 func (l *Logger) SetLevel(level logrus.Level, inherit bool) error {
-	if level == l.absLevel {
-		return nil
+	if err := l.setLevel(level, inherit); err != nil {
+		return err
 	}
-	if level == NilLevel && l.Name == RootLoggerName {
-		return ErrInvalidRootLevel
+	l.applyTmpLevels()
+	return nil
+}
+
+func (l *Logger) nilAllLevels() {
+	for _, child := range l.children {
+		child.absLevel = NilLevel
+		child.tmpLevel = MarkerLevel
+		child.inherit = true
+		child.nilAllLevels()
 	}
-	l.absLevel = level
-	switch level {
-	case NilLevel:
-		l.logger.Level = l.parent.GetEffectiveLevel()
-		l.inherit = true
-	default:
-		l.logger.Level = level
-		l.inherit = inherit
+}
+
+func (l *Logger) setLevel(level logrus.Level, inherit bool) error {
+	if level != l.absLevel || l.inherit != inherit {
+		if level == NilLevel && l.Name == RootLoggerName {
+			return ErrInvalidRootLevel
+		}
+		l.absLevel = level
+		switch level {
+		case NilLevel:
+			l.tmpLevel = l.parent.GetEffectiveLevel()
+			l.inherit = true
+		default:
+			l.tmpLevel = level
+			l.inherit = inherit
+		}
 	}
 	if l.inherit {
 		l.propagate()
@@ -111,11 +131,27 @@ func (l *Logger) GetEffectiveLevel() logrus.Level {
 	if !l.inherit {
 		return l.parent.GetEffectiveLevel()
 	}
+	if l.tmpLevel != MarkerLevel {
+		return l.tmpLevel
+	}
 	return l.logger.Level
 }
 
-func (l *Logger) GetLevel() logrus.Level {
-	return l.absLevel
+func (l *Logger) ApplyConfig(config LogriConfig) error {
+	root := l.GetRoot()
+	root.nilAllLevels()
+	// Loggers are already sorted by hierarchy, so we can apply top down safely
+	for _, loggerConfig := range config {
+		logger := root.GetChild(loggerConfig.Logger)
+		level, err := logrus.ParseLevel(loggerConfig.Level)
+		if err != nil {
+			// TODO: validate before it gets to this point
+			return err
+		}
+		logger.setLevel(level, !loggerConfig.Local)
+	}
+	root.applyTmpLevels()
+	return nil
 }
 
 func (l *Logger) propagate() {
@@ -126,21 +162,16 @@ func (l *Logger) propagate() {
 
 func (l *Logger) inheritLevel(parentLevel logrus.Level) {
 	if l.absLevel == NilLevel {
-		l.logger.Level = parentLevel
+		l.tmpLevel = parentLevel
 		l.propagate()
 	}
 }
 
-func (l *Logger) ApplyConfig(config LogriConfig) error {
-	// Loggers are already sorted by hierarchy, so we can apply top down safely
-	for _, loggerConfig := range config {
-		logger := l.GetChild(loggerConfig.Logger)
-		level, err := logrus.ParseLevel(loggerConfig.Level)
-		if err != nil {
-			// TODO: validate before it gets to this point
-			return err
-		}
-		logger.SetLevel(level, !loggerConfig.Local)
+func (l *Logger) applyTmpLevels() {
+	if l.tmpLevel != MarkerLevel {
+		l.logger.Level, l.tmpLevel = l.tmpLevel, MarkerLevel
 	}
-	return nil
+	for _, child := range l.children {
+		child.applyTmpLevels()
+	}
 }
