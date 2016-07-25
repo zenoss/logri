@@ -47,7 +47,18 @@ func (l *Logger) GetLogrusLogger() *logrus.Logger {
 	return l.logger
 }
 
+func (l *Logger) GetRoot() *Logger {
+	next := l
+	for next.parent != nil {
+		next = next.parent
+	}
+	return next
+}
+
 func (l *Logger) GetChild(name string) *Logger {
+	if name == "" || name == "*" {
+		return l.GetRoot()
+	}
 	relative := strings.TrimPrefix(name, l.Name+".")
 	abs := strings.TrimPrefix(fmt.Sprintf("%s.%s", l.Name, relative), ".")
 	parent := l
@@ -90,7 +101,7 @@ func (l *Logger) SetLevel(level logrus.Level, inherit bool) error {
 		l.logger.Level = level
 		l.inherit = inherit
 	}
-	if inherit {
+	if l.inherit {
 		l.propagate()
 	}
 	return nil
@@ -118,4 +129,18 @@ func (l *Logger) inheritLevel(parentLevel logrus.Level) {
 		l.logger.Level = parentLevel
 		l.propagate()
 	}
+}
+
+func (l *Logger) ApplyConfig(config LogriConfig) error {
+	// Loggers are already sorted by hierarchy, so we can apply top down safely
+	for _, loggerConfig := range config {
+		logger := l.GetChild(loggerConfig.Logger)
+		level, err := logrus.ParseLevel(loggerConfig.Level)
+		if err != nil {
+			// TODO: validate before it gets to this point
+			return err
+		}
+		logger.SetLevel(level, !loggerConfig.Local)
+	}
+	return nil
 }

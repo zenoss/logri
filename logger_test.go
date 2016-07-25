@@ -7,28 +7,22 @@ import (
 )
 
 func (s *LogriSuite) TestSetLoggerLevel(c *C) {
-	// Set the level to info and log below that
 	s.logger.SetLevel(logrus.InfoLevel, true)
-	s.AssertNotLogs(s.logger.Debug, "debug msg 1")
-	// Now set the level to debug and log at debug
+	s.AssertLogLevel(c, s.logger, "Info")
+
 	s.logger.SetLevel(logrus.DebugLevel, true)
-	s.AssertLogs(s.logger.Debug, "debug msg 2")
+	s.AssertLogLevel(c, s.logger, "Debug")
 }
 
 func (s *LogriSuite) TestUnsetLoggerLevel(c *C) {
 	err := s.logger.SetLevel(NilLevel, true)
 	c.Assert(err.Error(), Equals, ErrInvalidRootLevel.Error())
-
 	alogger := s.logger.GetChild("a")
 	alogger.SetLevel(logrus.ErrorLevel, true)
-
-	s.AssertLogs(alogger.Error, "error message")
-
+	s.AssertLogLevel(c, alogger, "Error")
 	err = alogger.SetLevel(NilLevel, true)
 	c.Assert(err, IsNil)
-
-	s.AssertNotLogs(alogger.Debug, "debug msg")
-	s.AssertLogs(alogger.Info, "info msg")
+	s.AssertLogLevel(c, alogger, "Info")
 }
 
 func (s *LogriSuite) TestGetChildLogger(c *C) {
@@ -71,39 +65,28 @@ func (s *LogriSuite) TestInheritLevelFromParent(chk *C) {
 	b.SetLevel(logrus.ErrorLevel, false) // Don't propagate
 	d.SetLevel(logrus.InfoLevel, true)
 
-	s.AssertLogs(a.Info, "info")
-	s.AssertLogs(a.Debug, "debug")
-
-	s.AssertLogs(b.Error, "error")
-	s.AssertNotLogs(b.Warn, "warn")
-
-	s.AssertLogs(c.Debug, "debug")
-	s.AssertLogs(c.Info, "info")
-
-	s.AssertNotLogs(d.Debug, "debug")
-	s.AssertLogs(d.Info, "info")
-
-	s.AssertNotLogs(e.Debug, "debug")
-	s.AssertLogs(e.Info, "info")
+	s.AssertLogLevel(chk, a, "Debug")
+	s.AssertLogLevel(chk, b, "Error")
+	s.AssertLogLevel(chk, c, "Debug")
+	s.AssertLogLevel(chk, d, "Info")
+	s.AssertLogLevel(chk, e, "Info")
 
 	// Unset d's level. Now d and e should inherit from the root, since b is a
 	// non-propagate level
 	d.SetLevel(NilLevel, true)
-	s.AssertLogs(d.Debug, "debug")
-	s.AssertLogs(e.Debug, "debug")
+	s.AssertLogLevel(chk, d, "Debug")
+	s.AssertLogLevel(chk, e, "Debug")
 
 	// Set c's level to NilLevel, which it already is. Shouldn't affect anything
 	c.SetLevel(NilLevel, true)
-	s.AssertLogs(c.Debug, "debug")
-	s.AssertLogs(d.Debug, "debug")
+	s.AssertLogLevel(chk, c, "Debug")
+	s.AssertLogLevel(chk, d, "Debug")
 
 	// Now set c's level to something else and back to Nil. Still should
 	// inherit from root
 	c.SetLevel(logrus.FatalLevel, true)
 	c.SetLevel(NilLevel, true)
-	s.AssertLogs(c.Debug, "debug")
-	s.AssertLogs(d.Debug, "debug")
-	s.AssertLogs(e.Debug, "debug")
-	s.AssertLogs(e.Debug, "debug")
-
+	s.AssertLogLevel(chk, c, "Debug")
+	s.AssertLogLevel(chk, d, "Debug")
+	s.AssertLogLevel(chk, e, "Debug")
 }
