@@ -200,3 +200,19 @@ func (s *LogriSuite) TestDeleteLoggerConfig(chk *C) {
 	s.AssertLogLevel(chk, e, "Info")
 
 }
+
+func (s *LogriSuite) TestLoggersUseExistingConfig(c *C) {
+	cfg := getConfig(c, inOrder)
+	a := s.logger.GetChild("a")   // Should log at info
+	b := s.logger.GetChild("a.b") // debug
+
+	// Apply the config after the loggers are created
+	s.logger.ApplyConfig(cfg)
+
+	f := s.logger.GetChild("a.b.c.d.e.f") // error
+
+	s.AssertLogLevel(c, a, "Info")
+	s.AssertLogLevel(c, b, "Debug")
+	s.AssertLogLevel(c, f, "Debug")
+
+}

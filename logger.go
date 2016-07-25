@@ -21,14 +21,15 @@ var (
 )
 
 type Logger struct {
-	mu       *sync.Mutex
-	Name     string
-	parent   *Logger
-	absLevel logrus.Level
-	tmpLevel logrus.Level
-	inherit  bool
-	children map[string]*Logger
-	logger   *logrus.Logger
+	mu         *sync.Mutex
+	Name       string
+	parent     *Logger
+	absLevel   logrus.Level
+	tmpLevel   logrus.Level
+	inherit    bool
+	lastConfig LogriConfig
+	children   map[string]*Logger
+	logger     *logrus.Logger
 }
 
 func NewRootLogger() *Logger {
@@ -65,6 +66,7 @@ func (l *Logger) GetChild(name string) *Logger {
 	relative := strings.TrimPrefix(name, l.Name+".")
 	abs := strings.TrimPrefix(fmt.Sprintf("%s.%s", l.Name, relative), ".")
 	parent := l
+	var changed bool
 	for _, part := range strings.Split(relative, ".") {
 		logger, ok := parent.children[part]
 		if !ok {
@@ -83,8 +85,12 @@ func (l *Logger) GetChild(name string) *Logger {
 				},
 			}
 			parent.children[part] = logger
+			changed = true
 		}
 		parent = logger
+	}
+	if changed && l.GetRoot().lastConfig != nil {
+		l.ApplyConfig(l.GetRoot().lastConfig)
 	}
 	return parent
 }
@@ -140,6 +146,7 @@ func (l *Logger) GetEffectiveLevel() logrus.Level {
 func (l *Logger) ApplyConfig(config LogriConfig) error {
 	root := l.GetRoot()
 	root.nilAllLevels()
+	root.lastConfig = config
 	// Loggers are already sorted by hierarchy, so we can apply top down safely
 	for _, loggerConfig := range config {
 		logger := root.GetChild(loggerConfig.Logger)
@@ -168,9 +175,10 @@ func (l *Logger) inheritLevel(parentLevel logrus.Level) {
 }
 
 func (l *Logger) applyTmpLevels() {
-	if l.tmpLevel != MarkerLevel {
-		l.logger.Level, l.tmpLevel = l.tmpLevel, MarkerLevel
+	if l.tmpLevel != MarkerLevel && l.tmpLevel != l.logger.Level {
+		l.logger.Level = l.tmpLevel
 	}
+	l.tmpLevel = MarkerLevel
 	for _, child := range l.children {
 		child.applyTmpLevels()
 	}
