@@ -22,11 +22,12 @@ type LoggerConfig struct {
 	Logger string
 	Level  string
 	Local  bool
-	Out    []Out
+	Out    []OutConfig
 }
 
 type OutConfig struct {
-	Type string
+	Type    OutputType
+	Options map[string]string
 }
 
 func ConfigFromYAML(r io.Reader) (cfg LogriConfig, err error) {
@@ -40,7 +41,7 @@ func ConfigFromYAML(r io.Reader) (cfg LogriConfig, err error) {
 func (c LogriConfig) Len() int      { return len(c) }
 func (c LogriConfig) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 
-// Sort loggers by place in the hierarchy
+// Sort loggers by depth in the hierarchy
 func (c LogriConfig) Less(i, j int) bool {
 	a, b := c[i].Logger, c[j].Logger
 	if a == "*" || a == "" {
