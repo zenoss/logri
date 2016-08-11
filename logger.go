@@ -3,6 +3,7 @@ package logri
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -21,7 +22,7 @@ var (
 )
 
 type Logger struct {
-	mu         *sync.Mutex
+	mu         sync.Mutex
 	Name       string
 	parent     *Logger
 	absLevel   logrus.Level
@@ -101,6 +102,12 @@ func (l *Logger) SetLevel(level logrus.Level, inherit bool) error {
 	}
 	l.applyTmpLevels()
 	return nil
+}
+
+func (l *Logger) SetOutput(w io.Writer) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logger.Out = w
 }
 
 func (l *Logger) nilAllLevels() {

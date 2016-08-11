@@ -1,6 +1,8 @@
 package logri_test
 
 import (
+	"bytes"
+
 	"github.com/Sirupsen/logrus"
 	. "github.com/iancmcc/logri"
 	. "gopkg.in/check.v1"
@@ -89,4 +91,17 @@ func (s *LogriSuite) TestInheritLevelFromParent(chk *C) {
 	s.AssertLogLevel(chk, c, "Debug")
 	s.AssertLogLevel(chk, d, "Debug")
 	s.AssertLogLevel(chk, e, "Debug")
+}
+
+func (s *LogriSuite) TestSetOutput(c *C) {
+
+	var w bytes.Buffer
+
+	s.logger.Info("message")
+	c.Assert(w.Len(), Equals, 0)
+
+	s.logger.SetOutput(&w)
+	s.logger.Info("message 2")
+	c.Assert(w.Len() > 0, Equals, true)
+
 }
