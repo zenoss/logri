@@ -94,14 +94,34 @@ func (s *LogriSuite) TestInheritLevelFromParent(chk *C) {
 }
 
 func (s *LogriSuite) TestSetOutput(c *C) {
-
 	var w bytes.Buffer
-
 	s.logger.Info("message")
 	c.Assert(w.Len(), Equals, 0)
-
 	s.logger.SetOutput(&w)
 	s.logger.Info("message 2")
 	c.Assert(w.Len() > 0, Equals, true)
+}
 
+func (s *LogriSuite) TestSetOutputs(c *C) {
+	var w1, w2 bytes.Buffer
+
+	s.logger.Info("message")
+	c.Assert(w1.Len(), Equals, 0)
+	c.Assert(w2.Len(), Equals, 0)
+
+	w1.Reset()
+	w2.Reset()
+
+	s.logger.SetOutputs(&w1)
+	s.logger.Info("message 2")
+	c.Assert(w1.Len() > 0, Equals, true)
+	c.Assert(w2.Len() > 0, Equals, false)
+
+	w1.Reset()
+	w2.Reset()
+
+	s.logger.SetOutputs(&w1, &w2)
+	s.logger.Info("message 3")
+	c.Assert(w1.Len() > 0, Equals, true)
+	c.Assert(w2.Len() > 0, Equals, true)
 }

@@ -110,6 +110,10 @@ func (l *Logger) SetOutput(w io.Writer) {
 	l.logger.Out = w
 }
 
+func (l *Logger) SetOutputs(writers ...io.Writer) {
+	l.SetOutput(io.MultiWriter(writers...))
+}
+
 func (l *Logger) nilAllLevels() {
 	for _, child := range l.children {
 		child.absLevel = NilLevel
