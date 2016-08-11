@@ -1,6 +1,7 @@
 package logri
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
@@ -14,13 +15,17 @@ const (
 	FileOutput   OutputType = "file"
 	StdoutOutput            = "stdout"
 	StderrOutput            = "stderr"
+	TestOutput              = "test" // Used for tests only
 )
 
 var (
 	ErrInvalidOutputOptions = errors.New("Insufficient or invalid options were given for an output")
 
-	// Registry of outputs
+	// Registry of file outputs
 	fileOutputRegistry = make(map[string]io.Writer)
+
+	// Registry of test outputs
+	testOutputRegistry = make(map[string]*bytes.Buffer)
 	mu                 sync.Mutex
 )
 
@@ -61,6 +66,19 @@ func GetOutputWriter(outtype OutputType, options map[string]string) (io.Writer, 
 	case StderrOutput:
 		return os.Stderr, nil
 
+	case TestOutput:
+		name, ok := options["name"]
+		if !ok {
+			return nil, ErrInvalidOutputOptions
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		if writer, ok := testOutputRegistry[name]; ok {
+			return writer, nil
+		}
+		var writer bytes.Buffer
+		testOutputRegistry[name] = &writer
+		return &writer, nil
 	}
 	return nil, ErrInvalidOutputOptions
 }

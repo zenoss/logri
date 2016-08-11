@@ -28,6 +28,7 @@ type LoggerConfig struct {
 type OutConfig struct {
 	Type    OutputType
 	Options map[string]string
+	Local   bool
 }
 
 func ConfigFromYAML(r io.Reader) (cfg LogriConfig, err error) {

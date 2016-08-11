@@ -58,11 +58,25 @@ var reset = []byte(`
   level: info
 `)
 
+var simplebuffer = []byte(`
+- logger: '*'
+  level: info
+  out:
+  - type: test
+    options:
+        name: test1
+`)
+
 func getConfig(c *C, yaml []byte) LogriConfig {
 	r := bytes.NewReader(yaml)
 	cfg, err := ConfigFromYAML(r)
 	c.Assert(err, IsNil)
 	return cfg
+}
+
+func getOutputBufferNamed(name string) *bytes.Buffer {
+	buffer, _ := GetOutputWriter(TestOutput, map[string]string{"name": name})
+	return buffer.(*bytes.Buffer)
 }
 
 func (s *LogriSuite) TestDeserializeConfig(c *C) {
@@ -215,4 +229,30 @@ func (s *LogriSuite) TestLoggersUseExistingConfig(c *C) {
 	s.AssertLogLevel(c, b, "Debug")
 	s.AssertLogLevel(c, f, "Debug")
 
+}
+
+func (s *LogriSuite) TestSimpleOutputConfig(c *C) {
+	cfg := getConfig(c, simplebuffer)
+
+	s.logger.ApplyConfig(cfg)
+
+	buf := getOutputBufferNamed("test1")
+	defer buf.Reset()
+
+	c.Assert(buf.Len(), Equals, 0)
+	s.logger.Info("HI")
+	c.Assert(buf.Len(), Not(Equals), 0)
+}
+
+func (s *LogriSuite) TestSimpleOutputConfigInherited(c *C) {
+	cfg := getConfig(c, simplebuffer)
+	a := s.logger.GetChild("a")
+	s.logger.ApplyConfig(cfg)
+
+	buf := getOutputBufferNamed("test1")
+	defer buf.Reset()
+
+	c.Assert(buf.Len(), Equals, 0)
+	a.Info("HI")
+	c.Assert(buf.Len(), Not(Equals), 0)
 }
