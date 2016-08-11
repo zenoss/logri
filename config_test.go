@@ -2,6 +2,7 @@ package logri_test
 
 import (
 	"bytes"
+	"fmt"
 
 	. "github.com/iancmcc/logri"
 
@@ -65,6 +66,30 @@ var simplebuffer = []byte(`
   - type: test
     options:
         name: test1
+`)
+
+var complexbuffers = []byte(`
+- logger: '*'
+  level: info
+  out:
+  - type: test
+    options:
+        name: root
+  - type: test
+    options:
+        name: root2
+- logger: 'a'
+  level: debug
+  out:
+  - type: test
+    options:
+      name: abuf
+  - type: test
+    local: true
+    options:
+      name: abuflocal
+- logger: 'a.b'
+  level: warn
 `)
 
 func getConfig(c *C, yaml []byte) LogriConfig {
@@ -255,4 +280,38 @@ func (s *LogriSuite) TestSimpleOutputConfigInherited(c *C) {
 	c.Assert(buf.Len(), Equals, 0)
 	a.Info("HI")
 	c.Assert(buf.Len(), Not(Equals), 0)
+}
+
+func (s *LogriSuite) TestComplexOutputBuffer(c *C) {
+	cfg := getConfig(c, complexbuffers)
+	//a := s.logger.GetChild("a")
+	ab := s.logger.GetChild("a.b")
+
+	s.logger.ApplyConfig(cfg)
+
+	rootbuf := getOutputBufferNamed("root")
+	root2buf := getOutputBufferNamed("root2")
+	abuf := getOutputBufferNamed("abuf")
+	abuflocal := getOutputBufferNamed("abuflocal")
+
+	reset := func() {
+		rootbuf.Reset()
+		root2buf.Reset()
+		abuf.Reset()
+		abuflocal.Reset()
+	}
+
+	ab.Warn("TEST") // Should write to rootbuf, root2buf, abuf, abuflocal
+
+	fmt.Println(rootbuf.String())
+	fmt.Println("====")
+	fmt.Println(root2buf.String())
+	fmt.Println("====")
+	fmt.Println(abuf.String())
+	fmt.Println("====")
+	fmt.Println(abuflocal.String())
+	fmt.Println("====")
+
+	reset()
+
 }
