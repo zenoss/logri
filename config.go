@@ -31,12 +31,21 @@ type OutConfig struct {
 	Local   bool
 }
 
-func ConfigFromYAML(r io.Reader) (cfg LogriConfig, err error) {
+func ConfigFromBytes(b []byte) (LogriConfig, error) {
+	var (
+		cfg LogriConfig
+	)
+	if err := yaml.Unmarshal(b, &cfg); err != nil {
+		return cfg, err
+	}
+	sort.Sort(&cfg)
+	return cfg, nil
+}
+
+func ConfigFromYAML(r io.Reader) (LogriConfig, error) {
 	var buf bytes.Buffer
 	buf.ReadFrom(r)
-	err = yaml.Unmarshal(buf.Bytes(), &cfg)
-	sort.Sort(&cfg)
-	return
+	return ConfigFromBytes(buf.Bytes())
 }
 
 func (c LogriConfig) Len() int      { return len(c) }

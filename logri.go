@@ -1,6 +1,12 @@
 package logri
 
-import "github.com/Sirupsen/logrus"
+import (
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/fsnotify/fsnotify"
+)
 
 var (
 	// RootLogger is the default logger tree.
@@ -9,9 +15,70 @@ var (
 	_ logrus.FieldLogger = RootLogger
 )
 
-// Logger returns a logger from the default tree with the given name.
-func Logger(name string) *logrus.Logger {
+// GetLogger returns a logger from the default tree with the given name.
+func GetLogger(name string) *Logger {
 	return RootLogger.GetChild(name)
+}
+
+// ApplyConfig applies configuration to the default tree.
+func ApplyConfig(config LogriConfig) error {
+	return RootLogger.ApplyConfig(config)
+}
+
+// ApplyConfigFromFile reads logging configuration from a file and applies it
+// to the default tree.
+func ApplyConfigFromFile(file string) error {
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	cfg, err := ConfigFromBytes(bytes)
+	if err != nil {
+		return err
+	}
+	return ApplyConfig(cfg)
+}
+
+// WatchConfigFile watches a given config file, applying the config on change
+func WatchConfigFile(file string) error {
+	// Set up an fsnotify watcher
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	// Get clean versions of the filename and its directory
+	cleanPath := filepath.Clean(file)
+	cleanDir, _ := filepath.Split(cleanPath)
+
+	// What event operations do we care about
+	ops := fsnotify.Write | fsnotify.Create
+
+	// Start watching the directory
+	w.Add(cleanDir)
+
+	err = nil
+	for {
+		select {
+		case e := <-w.Events:
+			// See if the event is for our config file
+			if filepath.Clean(e.Name) == cleanPath {
+				// It is, so check the operation. If it's a write or create, update.
+				if e.Op&ops > 0 {
+					err = ApplyConfigFromFile(cleanPath)
+				}
+			}
+		case err = <-w.Errors:
+		}
+		if err != nil {
+			WithError(err).WithFields(logrus.Fields{
+				"file": cleanPath,
+				"dir":  cleanDir,
+			}).Warning("Unable to read logging config file")
+		}
+		err = nil
+	}
 }
 
 // WithField creates an entry from the root logger and adds a field to
