@@ -283,7 +283,6 @@ func (s *LogriSuite) TestSimpleOutputConfigInherited(c *C) {
 
 func (s *LogriSuite) TestComplexOutputBuffer(c *C) {
 	cfg := getConfig(c, complexbuffers)
-	//a := s.logger.GetChild("a")
 	ab := s.logger.GetChild("a.b")
 
 	s.logger.ApplyConfig(cfg)
@@ -309,5 +308,15 @@ func (s *LogriSuite) TestComplexOutputBuffer(c *C) {
 	c.Assert(root2buf.Len(), Not(Equals), 0)
 	c.Assert(abuf.Len(), Not(Equals), 0)
 	c.Assert(abuflocal.Len(), Equals, 0)
+
+	reset()
+
+	a := s.logger.GetChild("a")
+	a.Debug("TEST") // Should write to all buffers
+
+	c.Assert(abuf.Len(), Not(Equals), 0)
+	c.Assert(abuflocal.Len(), Not(Equals), 0)
+	c.Assert(rootbuf.Len(), Not(Equals), 0)
+	c.Assert(root2buf.Len(), Not(Equals), 0)
 
 }
