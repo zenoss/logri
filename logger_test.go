@@ -8,6 +8,10 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+var (
+	nilLevel logrus.Level = 254
+)
+
 func (s *LogriSuite) TestSetLoggerLevel(c *C) {
 	s.logger.SetLevel(logrus.InfoLevel, true)
 	s.AssertLogLevel(c, s.logger, "Info")
@@ -17,12 +21,12 @@ func (s *LogriSuite) TestSetLoggerLevel(c *C) {
 }
 
 func (s *LogriSuite) TestUnsetLoggerLevel(c *C) {
-	err := s.logger.SetLevel(NilLevel, true)
+	err := s.logger.SetLevel(nilLevel, true)
 	c.Assert(err.Error(), Equals, ErrInvalidRootLevel.Error())
 	alogger := s.logger.GetChild("a")
 	alogger.SetLevel(logrus.ErrorLevel, true)
 	s.AssertLogLevel(c, alogger, "Error")
-	err = alogger.SetLevel(NilLevel, true)
+	err = alogger.SetLevel(nilLevel, true)
 	c.Assert(err, IsNil)
 	s.AssertLogLevel(c, alogger, "Info")
 }
@@ -75,19 +79,19 @@ func (s *LogriSuite) TestInheritLevelFromParent(chk *C) {
 
 	// Unset d's level. Now d and e should inherit from the root, since b is a
 	// non-propagate level
-	d.SetLevel(NilLevel, true)
+	d.SetLevel(nilLevel, true)
 	s.AssertLogLevel(chk, d, "Debug")
 	s.AssertLogLevel(chk, e, "Debug")
 
-	// Set c's level to NilLevel, which it already is. Shouldn't affect anything
-	c.SetLevel(NilLevel, true)
+	// Set c's level to nilLevel, which it already is. Shouldn't affect anything
+	c.SetLevel(nilLevel, true)
 	s.AssertLogLevel(chk, c, "Debug")
 	s.AssertLogLevel(chk, d, "Debug")
 
 	// Now set c's level to something else and back to Nil. Still should
 	// inherit from root
 	c.SetLevel(logrus.FatalLevel, true)
-	c.SetLevel(NilLevel, true)
+	c.SetLevel(nilLevel, true)
 	s.AssertLogLevel(chk, c, "Debug")
 	s.AssertLogLevel(chk, d, "Debug")
 	s.AssertLogLevel(chk, e, "Debug")

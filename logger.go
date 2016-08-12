@@ -11,16 +11,19 @@ import (
 )
 
 const (
-	RootLoggerName              = ""
-	MarkerLevel    logrus.Level = 255
-	NilLevel       logrus.Level = 254
+	rootLoggerName              = ""
+	markerLevel    logrus.Level = 255
+	nilLevel       logrus.Level = 254
 )
 
 var (
-	ErrInvalidRootLevel                    = errors.New("The root logger must have a level")
-	RootLogger          logrus.FieldLogger = NewRootLogger()
+	// ErrInvalidRootLevel is returned when a nil level is set on the root logger
+	ErrInvalidRootLevel = errors.New("The root logger must have a level")
 )
 
+// Logger is the wrapper of a Logrus logger. It holds references to its child
+// loggers, and manages transactional application of new levels and output
+// streams.
 type Logger struct {
 	mu           sync.Mutex
 	Name         string
@@ -35,15 +38,13 @@ type Logger struct {
 	localOutputs []io.Writer
 }
 
-func NewRootLogger() *Logger {
-	return NewRootLoggerFromLogrus(logrus.New())
-}
-
-func NewRootLoggerFromLogrus(base *logrus.Logger) *Logger {
+// NewLoggerFromLogrus creates a new Logri logger tree rooted at a given Logrus
+// logger.
+func NewLoggerFromLogrus(base *logrus.Logger) *Logger {
 	return &Logger{
-		Name:         RootLoggerName,
-		absLevel:     logrus.InfoLevel,
-		tmpLevel:     MarkerLevel,
+		Name:         rootLoggerName,
+		absLevel:     base.Level,
+		tmpLevel:     markerLevel,
 		inherit:      true,
 		children:     make(map[string]*Logger),
 		logger:       base,
@@ -52,10 +53,7 @@ func NewRootLoggerFromLogrus(base *logrus.Logger) *Logger {
 	}
 }
 
-func (l *Logger) GetLogrusLogger() *logrus.Logger {
-	return l.logger
-}
-
+// GetRoot returns the logger at the root of this logger's tree.
 func (l *Logger) GetRoot() *Logger {
 	next := l
 	for next.parent != nil {
@@ -64,6 +62,17 @@ func (l *Logger) GetRoot() *Logger {
 	return next
 }
 
+// GetChild returns a logger that is a child of this logger, creating
+// intervening loggers if they do not exist.  If the name given starts with the
+// full name of the current logger (i.e., is "absolute"), then the logger
+// returned will take that into account, rather than creating a duplicate tree
+// below this one.
+//
+// Example:
+//  logger := logri.Logger("a.b.c") // logger.name == "a.b.c"
+//	l := logger.GetChild("a.b.c.d") // l.name == "a.b.c.d"
+//	l = logger.GetChild("d") // l.name == "a.b.c.d"
+//	l = logger.GetChild("b.c.d") // l.name == "a.b.c.b.c.d"
 func (l *Logger) GetChild(name string) *Logger {
 	if name == "" || name == "*" {
 		return l.GetRoot()
@@ -72,7 +81,7 @@ func (l *Logger) GetChild(name string) *Logger {
 	parent := l
 	var (
 		changed  bool
-		localabs string = l.Name
+		localabs = l.Name
 	)
 	for _, part := range strings.Split(relative, ".") {
 		if localabs == "" {
@@ -85,8 +94,8 @@ func (l *Logger) GetChild(name string) *Logger {
 			logger = &Logger{
 				Name:     localabs,
 				parent:   parent,
-				absLevel: NilLevel,
-				tmpLevel: MarkerLevel,
+				absLevel: nilLevel,
+				tmpLevel: markerLevel,
 				inherit:  true,
 				children: make(map[string]*Logger),
 				logger: &logrus.Logger{
@@ -107,6 +116,9 @@ func (l *Logger) GetChild(name string) *Logger {
 	return parent
 }
 
+// SetLevel sets the logging level for this logger and children inheriting
+// their level from this logger. If inherit is false, the level will be set
+// locally only.
 func (l *Logger) SetLevel(level logrus.Level, inherit bool) error {
 	if err := l.setLevel(level, inherit); err != nil {
 		return err
@@ -123,58 +135,35 @@ func (l *Logger) addOutput(w io.Writer, inherit bool) {
 	}
 }
 
+// SetOutput sets the output to which this logger should write.
 func (l *Logger) SetOutput(w io.Writer) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.logger.Out = w
 }
 
+// SetOutputs combines several output writers into one and configures this
+// logger to write to that.
 func (l *Logger) SetOutputs(writers ...io.Writer) {
 	l.SetOutput(io.MultiWriter(writers...))
 }
 
-func (l *Logger) resetChildren() {
-	for _, child := range l.children {
-		child.absLevel = NilLevel
-		child.tmpLevel = MarkerLevel
-		child.inherit = true
-		child.outputs = []io.Writer{}
-		child.localOutputs = []io.Writer{}
-		child.resetChildren()
-	}
-}
-
-func (l *Logger) setLevel(level logrus.Level, inherit bool) error {
-	if level != l.absLevel || l.inherit != inherit {
-		if level == NilLevel && l.Name == RootLoggerName {
-			return ErrInvalidRootLevel
-		}
-		l.absLevel = level
-		switch level {
-		case NilLevel:
-			l.tmpLevel = l.parent.GetEffectiveLevel()
-			l.inherit = true
-		default:
-			l.tmpLevel = level
-			l.inherit = inherit
-		}
-	}
-	if l.inherit {
-		l.propagate()
-	}
-	return nil
-}
-
+// GetEffectiveLevel returns the effective level of this logger. If this logger
+// has no level set locally, it returns the level of its closest ancestor with
+// an inheritable level.
 func (l *Logger) GetEffectiveLevel() logrus.Level {
 	if !l.inherit {
 		return l.parent.GetEffectiveLevel()
 	}
-	if l.tmpLevel != MarkerLevel {
+	if l.tmpLevel != markerLevel {
 		return l.tmpLevel
 	}
 	return l.logger.Level
 }
 
+// ApplyConfig applies a Logrus config to a logger tree. Regardless of the
+// logger within the tree to which the config is applied, it is treated as the
+// root of the tree for purposes of configuring loggers.
 func (l *Logger) ApplyConfig(config LogriConfig) error {
 	root := l.GetRoot()
 	root.outputs = []io.Writer{}
@@ -204,6 +193,38 @@ func (l *Logger) ApplyConfig(config LogriConfig) error {
 	return nil
 }
 
+func (l *Logger) resetChildren() {
+	for _, child := range l.children {
+		child.absLevel = nilLevel
+		child.tmpLevel = markerLevel
+		child.inherit = true
+		child.outputs = []io.Writer{}
+		child.localOutputs = []io.Writer{}
+		child.resetChildren()
+	}
+}
+
+func (l *Logger) setLevel(level logrus.Level, inherit bool) error {
+	if level != l.absLevel || l.inherit != inherit {
+		if level == nilLevel && l.Name == rootLoggerName {
+			return ErrInvalidRootLevel
+		}
+		l.absLevel = level
+		switch level {
+		case nilLevel:
+			l.tmpLevel = l.parent.GetEffectiveLevel()
+			l.inherit = true
+		default:
+			l.tmpLevel = level
+			l.inherit = inherit
+		}
+	}
+	if l.inherit {
+		l.propagate()
+	}
+	return nil
+}
+
 func (l *Logger) propagate() {
 	for _, child := range l.children {
 		child.inheritLevel(l.GetEffectiveLevel())
@@ -230,16 +251,16 @@ func (l *Logger) inheritOutputs(writers []io.Writer) {
 }
 
 func (l *Logger) inheritLevel(parentLevel logrus.Level) {
-	if l.absLevel == NilLevel {
+	if l.absLevel == nilLevel {
 		l.tmpLevel = parentLevel
 	}
 }
 
 func (l *Logger) applyTmpState() {
-	if l.tmpLevel != MarkerLevel && l.tmpLevel != l.logger.Level {
+	if l.tmpLevel != markerLevel && l.tmpLevel != l.logger.Level {
 		l.logger.Level = l.tmpLevel
 	}
-	l.tmpLevel = MarkerLevel
+	l.tmpLevel = markerLevel
 	allwriters := append(l.outputs, l.localOutputs...)
 	l.SetOutputs(dedupeWriters(allwriters...)...)
 	for _, child := range l.children {
