@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 
@@ -187,6 +188,9 @@ func (l *Logger) ApplyConfig(config LogriConfig) error {
 			}
 			logger.addOutput(w, !outputConfig.Local)
 		}
+	}
+	if len(root.outputs) == 0 && len(root.localOutputs) == 0 {
+		root.outputs = append(root.outputs, os.Stderr)
 	}
 	root.propagate()
 	root.applyTmpState()
