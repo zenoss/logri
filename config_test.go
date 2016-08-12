@@ -2,7 +2,6 @@ package logri_test
 
 import (
 	"bytes"
-	"fmt"
 
 	. "github.com/iancmcc/logri"
 
@@ -78,7 +77,7 @@ var complexbuffers = []byte(`
   - type: test
     options:
         name: root2
-- logger: 'a'
+- logger: a
   level: debug
   out:
   - type: test
@@ -88,7 +87,7 @@ var complexbuffers = []byte(`
     local: true
     options:
       name: abuflocal
-- logger: 'a.b'
+- logger: a.b
   level: warn
 `)
 
@@ -301,17 +300,14 @@ func (s *LogriSuite) TestComplexOutputBuffer(c *C) {
 		abuflocal.Reset()
 	}
 
-	ab.Warn("TEST") // Should write to rootbuf, root2buf, abuf, abuflocal
-
-	fmt.Println(rootbuf.String())
-	fmt.Println("====")
-	fmt.Println(root2buf.String())
-	fmt.Println("====")
-	fmt.Println(abuf.String())
-	fmt.Println("====")
-	fmt.Println(abuflocal.String())
-	fmt.Println("====")
-
 	reset()
+	defer reset()
+
+	ab.Error("TEST") // Should write to rootbuf, root2buf, abuf
+
+	c.Assert(rootbuf.Len(), Not(Equals), 0)
+	c.Assert(root2buf.Len(), Not(Equals), 0)
+	c.Assert(abuf.Len(), Not(Equals), 0)
+	c.Assert(abuflocal.Len(), Equals, 0)
 
 }

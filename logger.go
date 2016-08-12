@@ -69,14 +69,21 @@ func (l *Logger) GetChild(name string) *Logger {
 		return l.GetRoot()
 	}
 	relative := strings.TrimPrefix(name, l.Name+".")
-	abs := strings.TrimPrefix(fmt.Sprintf("%s.%s", l.Name, relative), ".")
 	parent := l
-	var changed bool
+	var (
+		changed  bool
+		localabs string = l.Name
+	)
 	for _, part := range strings.Split(relative, ".") {
+		if localabs == "" {
+			localabs = part
+		} else {
+			localabs = fmt.Sprintf("%s.%s", localabs, part)
+		}
 		logger, ok := parent.children[part]
 		if !ok {
 			logger = &Logger{
-				Name:     abs,
+				Name:     localabs,
 				parent:   parent,
 				absLevel: NilLevel,
 				tmpLevel: MarkerLevel,
@@ -219,7 +226,7 @@ func (l *Logger) getInheritableOutputs() []io.Writer {
 }
 
 func (l *Logger) inheritOutputs(writers []io.Writer) {
-	l.outputs = writers
+	l.outputs = dedupeWriters(append(l.outputs, writers...)...)
 }
 
 func (l *Logger) inheritLevel(parentLevel logrus.Level) {
