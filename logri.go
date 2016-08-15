@@ -81,6 +81,11 @@ func WatchConfigFile(file string) error {
 	}
 }
 
+// Adds the given hook to every logger in the tree
+func AddHook(hook logrus.Hook) {
+	RootLogger.AddHook(hook)
+}
+
 // WithField creates an entry from the root logger and adds a field to
 // it. If you want multiple fields, use `WithFields`.
 //

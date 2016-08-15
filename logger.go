@@ -229,6 +229,14 @@ func (l *Logger) setLevel(level logrus.Level, inherit bool) error {
 	return nil
 }
 
+// AddHook adds a hook to this logger and all its children
+func (l *Logger) AddHook(hook logrus.Hook) {
+	l.logger.AddHook(hook)
+	for _, child := range l.children {
+		child.AddHook(hook)
+	}
+}
+
 func (l *Logger) propagate() {
 	for _, child := range l.children {
 		child.inheritLevel(l.GetEffectiveLevel())
