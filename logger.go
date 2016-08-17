@@ -102,10 +102,11 @@ func (l *Logger) GetChild(name string) *Logger {
 				logger: &logrus.Logger{
 					Out:       parent.logger.Out,
 					Formatter: parent.logger.Formatter,
-					Hooks:     parent.logger.Hooks,
+					Hooks:     CopyHooksExceptLoggerHook(parent.logger.Hooks),
 					Level:     parent.logger.Level,
 				},
 			}
+			logger.logger.Hooks.Add(LoggerHook{localabs})
 			parent.children[part] = logger
 			changed = true
 		}
@@ -231,7 +232,7 @@ func (l *Logger) setLevel(level logrus.Level, inherit bool) error {
 
 // AddHook adds a hook to this logger and all its children
 func (l *Logger) AddHook(hook logrus.Hook) {
-	l.logger.AddHook(hook)
+	l.logger.Hooks.Add(hook)
 	for _, child := range l.children {
 		child.AddHook(hook)
 	}
