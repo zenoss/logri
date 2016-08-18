@@ -12,3 +12,25 @@ it adds the ability to:
 * Optionally watch a logging configuration file for changes
 
 And, of course, it retains Logrus's excellent structured logging capabilities.
+
+## Usage
+
+You can drop Logri in to replace logging or Logrus very simply:
+
+```go
+package main
+
+
+import (
+    log "github.com/zenoss/logri"
+)
+
+func main() {
+
+    log.Infof("Logri can replace the %s package", "logging")
+
+    log.WithFields(log.Fields{
+        "package": "logrus",
+    }).Infof("Or another popular logging package")
+}
+```
