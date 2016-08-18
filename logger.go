@@ -102,7 +102,7 @@ func (l *Logger) GetChild(name string) *Logger {
 				logger: &logrus.Logger{
 					Out:       parent.logger.Out,
 					Formatter: parent.logger.Formatter,
-					Hooks:     CopyHooksExceptLoggerHook(parent.logger.Hooks),
+					Hooks:     copyHooksExceptLoggerHook(parent.logger.Hooks),
 					Level:     parent.logger.Level,
 				},
 			}

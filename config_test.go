@@ -3,7 +3,7 @@ package logri_test
 import (
 	"bytes"
 
-	. "github.com/iancmcc/logri"
+	. "github.com/zenoss/logri"
 
 	. "gopkg.in/check.v1"
 )

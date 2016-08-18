@@ -7,7 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/test"
-	. "github.com/iancmcc/logri"
+	. "github.com/zenoss/logri"
 	. "gopkg.in/check.v1"
 )
 

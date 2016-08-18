@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/Sirupsen/logrus"
-	. "github.com/iancmcc/logri"
+	. "github.com/zenoss/logri"
 	. "gopkg.in/check.v1"
 )
 
