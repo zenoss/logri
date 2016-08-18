@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"sync"
 
@@ -168,6 +167,7 @@ func (l *Logger) GetEffectiveLevel() logrus.Level {
 // root of the tree for purposes of configuring loggers.
 func (l *Logger) ApplyConfig(config LogriConfig) error {
 	root := l.GetRoot()
+	origoutputs, origlocals := root.outputs, root.localOutputs
 	root.outputs = []io.Writer{}
 	root.localOutputs = []io.Writer{}
 	root.resetChildren()
@@ -191,7 +191,8 @@ func (l *Logger) ApplyConfig(config LogriConfig) error {
 		}
 	}
 	if len(root.outputs) == 0 && len(root.localOutputs) == 0 {
-		root.outputs = append(root.outputs, os.Stderr)
+		root.outputs = origoutputs
+		root.localOutputs = origlocals
 	}
 	root.propagate()
 	root.applyTmpState()

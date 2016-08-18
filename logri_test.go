@@ -1,7 +1,6 @@
 package logri_test
 
 import (
-	"io/ioutil"
 	"reflect"
 	"testing"
 
@@ -27,7 +26,6 @@ var (
 func (s *LogriSuite) SetUpTest(c *C) {
 	logger, hook := test.NewNullLogger()
 	s.logger = NewLoggerFromLogrus(logger)
-	s.logger.SetOutput(ioutil.Discard)
 	s.hook = hook
 }
 
