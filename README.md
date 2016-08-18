@@ -74,4 +74,11 @@ them among packages.
 
 ### Configuration via file
 
-You can also configure Logri using a YAML file.
+You can also configure Logri using a YAML file. A file `/etc/logri.conf` with
+contents:
+
+```yaml
+logger: '*'
+- level: debug
+- output:
+```
