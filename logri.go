@@ -20,6 +20,11 @@ func GetLogger(name string) *Logger {
 	return RootLogger.GetChild(name)
 }
 
+// SetLevel sets the level of the root logger and its descendants
+func SetLevel(level logrus.Level) {
+	RootLogger.SetLevel(level, true)
+}
+
 // ApplyConfig applies configuration to the default tree.
 func ApplyConfig(config LogriConfig) error {
 	return RootLogger.ApplyConfig(config)
