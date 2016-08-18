@@ -74,11 +74,57 @@ them among packages.
 
 ### Configuration via file
 
-You can also configure Logri using a YAML file. A file `/etc/logri.conf` with
-contents:
+You can also configure Logri using a YAML file. Given a file `/etc/logging.conf`
+with these contents:
 
 ```yaml
-logger: '*'
-- level: debug
-- output:
+- logger: '*'
+  level: debug
+  out:
+  - type: stderr
+  - type: file
+    options:
+      file: /var/log/app.log
+- logger: package
+  level: warn
+  local: true
+  out:
+  - type: file
+    local: true
+    options:
+      file: /var/log/package.warn.log
+- logger: package.component
+  level: error
+  out:
+  - type: file
+    options:
+      file: /var/log/package.component.error.log
+```
+
+You can configure the loggers defined above very simply:
+
+```go
+logri.ApplyConfigFromFile("/etc/logging.conf")
+```
+
+That can be called at any time, and it will reconfigure loggers to match the
+config at that time, with no need to restart or recreate loggers.
+
+You can also watch that file for changes, rather than listening for a signal to
+reload logging config:
+
+```go
+package main
+
+import (
+    "github.com/zenoss/logri"
+)
+
+func main() {
+
+    // Start watching the logging config for changes
+    go logri.WatchConfigFile("/etc/logging.conf")
+
+    doStuff()
+}
 ```
