@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -69,10 +69,11 @@ func (l *Logger) GetRoot() *Logger {
 // below this one.
 //
 // Example:
-//  logger := logri.Logger("a.b.c") // logger.name == "a.b.c"
-//	l := logger.GetChild("a.b.c.d") // l.name == "a.b.c.d"
-//	l = logger.GetChild("d") // l.name == "a.b.c.d"
-//	l = logger.GetChild("b.c.d") // l.name == "a.b.c.b.c.d"
+//
+//	 logger := logri.Logger("a.b.c") // logger.name == "a.b.c"
+//		l := logger.GetChild("a.b.c.d") // l.name == "a.b.c.d"
+//		l = logger.GetChild("d") // l.name == "a.b.c.d"
+//		l = logger.GetChild("b.c.d") // l.name == "a.b.c.b.c.d"
 func (l *Logger) GetChild(name string) *Logger {
 	if name == "" || name == "*" {
 		return l.GetRoot()
