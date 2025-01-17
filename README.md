@@ -1,6 +1,6 @@
 # Logri
 
-Logri is a wrapper for [Logrus](https://github.com/Sirupsen/logrus) that
+Logri is a wrapper for [Logrus](https://github.com/sirupsen/logrus) that
 provides **hierarchical, configurable, structured logging**. 
 
 Like Logrus, it's a drop-in replacement for Go's standard logging library, but
@@ -22,7 +22,7 @@ package main
 
 
 import (
-        "github.com/Sirupsen/logrus"
+        "github.com/sirupsen/logrus"
     log "github.com/zenoss/logri"
 )
 
@@ -47,7 +47,7 @@ own.
 package main
 
 import (
-    "github.com/Sirupsen/logrus"
+    "github.com/sirupsen/logrus"
     "github.com/zenoss/logri"
 )
 

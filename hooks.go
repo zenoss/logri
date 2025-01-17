@@ -1,6 +1,6 @@
 package logri
 
-import "github.com/Sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 // LoggerHook is a Logrus hook that adds the logger name as a field to the entry
 type LoggerHook struct {

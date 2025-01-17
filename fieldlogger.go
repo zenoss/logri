@@ -1,6 +1,6 @@
 package logri
 
-import "github.com/Sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 func (l *Logger) WithField(key string, value interface{}) *logrus.Entry {
 	return l.logger.WithField(key, value)
